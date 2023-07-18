@@ -2379,7 +2379,7 @@ create procedure [dbo].[ms_api]
 			if @sba in ('table_booking')
 				begin
 
-					declare @table_booking_id	uniqueidentifier
+					declare @table_booking_id	uniqueidentifier = json_value(@js, '$.id')
 						  , @client_id_tb uniqueidentifier = json_value(@js, '$.client_id')
 						  , @table_id_tb uniqueidentifier = json_value(@js, '$.table_id')
 						  , @date date = json_value(@js, '$.date')
@@ -2388,6 +2388,7 @@ create procedure [dbo].[ms_api]
 						  , @guests_count int = json_value(@js, '$.guests_count')
 						  , @table_booking_status varchar(10) = json_value(@js, '$.status')
 						  , @capacity_tb int
+						  , @restaurant_id_tb	uniqueidentifier = json_value(@js, '$.restaurant_id')
 
 					if @action in ('table_booking.get')
 						begin
@@ -2418,10 +2419,19 @@ create procedure [dbo].[ms_api]
 								end
 
 							--проверка на корректность даты
-							if (@date < getdate())
+							if (@date < cast(getdate() as date))
 								begin
 									set @err = 'err.tabel_booking_create.invalid_date'
 									set @errdesc = 'Некорректная дата'
+
+									goto err
+								end
+
+							--проверка на корректность времени
+							if (@start_time > @end_time)
+								begin
+									set @err = 'err.tabel_booking_create.invalid_time'
+									set @errdesc = 'Некорректное время'
 
 									goto err
 								end
@@ -2453,25 +2463,28 @@ create procedure [dbo].[ms_api]
 								end
 
 							--проверка на корректность числа гостей
-							if (@guests_count < 1 and @guests_count > @capacity_tb)
+							if (@guests_count < 1 or @guests_count > @capacity_tb)
 								begin
 									set @err = 'err.table_booking_create.invalid_guests_count'
-									set @errdesc = 'Максимальная вместимость = ' + @capacity_tb
+									set @errdesc = 'Максимальная вместимость = ' + cast(@capacity_tb as nvarchar(3))
 
 									goto err
 								end
 
 							--проверка на сущестование клиента
-							set @rp_ = null
-							set @jsT = (select @client_id_tb as [id] for json path, without_array_wrapper)
-							exec [dbo].[ms_api] 'client.get', @jsT, @rp_ out
-
-							if json_value(@rp_, '$.response.id') is null
+							if @client_id_tb is not null
 								begin
-									set @err = 'err.table_booking_create.client_not_found'
-									set @errdesc = 'Клиент не найден'
+									set @rp_ = null
+									set @jsT = (select @client_id_tb as [id] for json path, without_array_wrapper)
+									exec [dbo].[ms_api] 'client.get', @jsT, @rp_ out
 
-									goto err
+									if json_value(@rp_, '$.response.id') is null
+										begin
+											set @err = 'err.table_booking_create.client_not_found'
+											set @errdesc = 'Клиент не найден'
+
+											goto err
+										end
 								end
 
 							--проверка времени, что оно попадает в рабочие часы
@@ -2524,7 +2537,7 @@ create procedure [dbo].[ms_api]
 												@date as [date],
 												@start_time as [start_time],
 												@end_time as [end_time],
-												@guests_count as [guest_count],
+												@guests_count as [guests_count],
 												isnull(@table_booking_status, 'wait_conf') as [status]
 										for json path, without_array_wrapper)
 
@@ -2533,7 +2546,360 @@ create procedure [dbo].[ms_api]
 						end
 
 
+					if @action in ('table_booking.confirm')
+						begin
 
+							--проверка на наличие id
+							if (@table_booking_id is null)
+								begin
+									set @err = 'err.table_booking_confirm.unset_field'
+									set @errdesc = 'Бронь не найдена'
+
+									goto err
+								end
+
+							select @table_booking_status = [status]
+							from [dbo].[table_bookings] 
+							where [id] = @table_booking_id
+
+							--проверка на существование брони с таким id
+							if @table_booking_status is null
+								begin
+									set @err = 'err.table_booking_confirm.table_booking_not_found'
+									set @errdesc = 'Бронь не найдена'
+
+									goto err
+								end
+
+
+							--проверка на статус 
+							if @table_booking_status in ('cancel', 'success')
+								begin
+									set @err = 'err.table_booking_confirm.booking_ended'
+									set @errdesc = 'Бронь закончилась'
+
+									goto err
+								end
+
+							--проверка на статус 
+							if @table_booking_status = 'confirm'
+								begin
+									set @err = 'err.table_booking_confirm.booking_already_confirm'
+									set @errdesc = 'Бронь уже подтверждена'
+
+									goto err
+								end	
+
+							--изменяем бронь
+							update [dbo].[table_bookings] 
+							set [status] = 'confirm'
+							where [id] = @table_booking_id
+		
+							--выводим
+							set @rp = (select @table_booking_id as [id],
+											  'confirm' as [status]
+									   for json path, without_array_wrapper)
+
+							goto ok
+
+						end
+
+
+					if @action in ('table_booking.cancel')
+						begin
+
+							--проверка на наличие id
+							if (@table_booking_id is null)
+								begin
+									set @err = 'err.table_booking_cancel.unset_field'
+									set @errdesc = 'Бронь не найдена'
+
+									goto err
+								end
+
+							select @table_booking_status = [status]
+							from [dbo].[table_bookings] 
+							where [id] = @table_booking_id
+
+							--проверка на существование брони с таким id
+							if @table_booking_status is null
+								begin
+									set @err = 'err.table_booking_cancel.table_booking_not_found'
+									set @errdesc = 'Бронь не найдена'
+
+									goto err
+								end
+
+
+							--проверка на статус 
+							if @table_booking_status in ('cancel', 'success')
+								begin
+									set @err = 'err.table_booking_cancel.booking_ended'
+									set @errdesc = 'Бронь уже закончилась'
+
+									goto err
+								end	
+
+	
+
+							--изменяем бронь
+							update [dbo].[table_bookings] 
+							set [status] = 'cancel'
+							where [id] = @table_booking_id
+		
+							--выводим
+							set @rp = (select @table_booking_id as [id],
+											  'cancel' as [status]
+									   for json path, without_array_wrapper)
+
+							goto ok
+
+						end
+
+
+					if @action in ('table_booking.success')
+						begin
+
+							--проверка на наличие id
+							if (@table_booking_id is null)
+								begin
+									set @err = 'err.table_booking_success.unset_field'
+									set @errdesc = 'Бронь не найдена'
+
+									goto err
+								end
+
+							select @table_booking_status = [status]
+							from [dbo].[table_bookings] 
+							where [id] = @table_booking_id
+
+							--проверка на существование брони с таким id
+							if @table_booking_status is null
+								begin
+									set @err = 'err.table_booking_success.table_booking_not_found'
+									set @errdesc = 'Бронь не найдена'
+
+									goto err
+								end
+
+							--проверка на статус 
+							if @table_booking_status = 'wait_conf'
+								begin
+									set @err = 'err.table_booking_success.booking_not_confirm'
+									set @errdesc = 'Бронь не подтверждена'
+
+									goto err
+								end	
+
+							--проверка на статус 
+							if @table_booking_status = 'cancel'
+								begin
+									set @err = 'err.table_booking_success.booking_canceled'
+									set @errdesc = 'Бронь отменена'
+
+									goto err
+								end	
+
+							--проверка на статус 
+							if @table_booking_status = 'success'
+								begin
+									set @err = 'err.table_booking_success.booking_already_success'
+									set @errdesc = 'Бронь уже закончилась'
+
+									goto err
+								end	
+
+	
+
+							--изменяем бронь
+							update [dbo].[table_bookings] 
+							set [status] = 'success'
+							where [id] = @table_booking_id
+		
+							--выводим
+							set @rp = (select @table_booking_id as [id],
+											  'success' as [status]
+									   for json path, without_array_wrapper)
+
+							goto ok
+
+						end
+
+
+					if @action in ('table_booking.search_free_table')
+						begin
+
+							--проверка на наличие id
+							if (@restaurant_id_tb is null)
+								begin
+									set @err = 'err.table_booking_search_free_table.unset_field'
+									set @errdesc = 'Ресторан не найден'
+
+									goto err
+								end
+
+							--проверка обязательных параметров на null
+							if (@date is null
+								or @start_time is null
+								or @end_time is null
+								or @guests_count is null)
+								begin
+									set @err = 'err.table_booking_search_free_table.hasnt_data'
+									set @errdesc = 'Указаны не все необходимые параметры'
+
+									goto err
+								end
+
+							--проверка на корректность даты
+							if (@date < cast(getdate() as date))
+								begin
+									set @err = 'err.tabel_booking_search_free_tables.invalid_date'
+									set @errdesc = 'Некорректная дата'
+
+									goto err
+								end
+
+							--проверка на корректность времени
+							if (@start_time > @end_time)
+								begin
+									set @err = 'err.tabel_booking_create.invalid_time'
+									set @errdesc = 'Некорректное время'
+
+									goto err
+								end
+
+							--проверка на корректность числа гостей
+							if (@guests_count < 1 or @guests_count > 30)
+								begin
+									set @err = 'err.table_booking_search_free_table.invalid_guests_count'
+									set @errdesc = 'Некорректное число гостей'
+
+									goto err
+								end
+
+							--проверка на существование ресторана
+							set @rp_ = null
+							set @jsT = (select @restaurant_id_tb as [id] for json path, without_array_wrapper)
+							exec [dbo].[ms_api] 'restaurant.get', @jsT, @rp_ out
+
+							if json_value(@rp_, '$.response.id') is null
+								begin
+									set @err = 'err.table_booking_search_free_table.restaurant_not_found'
+									set @errdesc = 'Ресторан не найден'
+
+									goto err
+								end
+
+							--проверка корректности времени, что оно попадает в рабочие часы
+							if not exists (select top 1 1
+										   from [dbo].[restaurants]
+										   where [id] = @restaurant_id_tb
+												and (@start_time between [work_start] and [work_end])
+												and (@end_time between [work_start] and [work_end])
+												and [status] = 'Y')
+								begin
+									set @err = 'err.table_booking_search_free_table.invalid_time'
+									set @errdesc = 'Указанное время не соответствует режиму работы'
+
+									goto err
+								end
+		
+							--выводим
+							set @rp = (select top 1 t.*
+									   from [dbo].[tables] t
+									   left join [dbo].[table_bookings] tb on tb.[table_id] = t.id
+									   where (tb.[id] is null 
+											or (@date = [date] and (@start_time not between [start_time] and [end_time]) 
+															   and (@end_time not between [start_time] and [end_time])
+															   and ([start_time] not between @start_time and @end_time)
+															   and ([end_time] not between @start_time and @end_time)
+											or @date <> [date])
+											and t.[capacity] >= @guests_count
+											and t.[status] = 'Y')
+									   for json path, without_array_wrapper)
+
+							goto ok
+
+						end
+
+
+					if @action in ('table_booking.seat_now')
+						begin
+
+							set @date = cast(getdate() as date)
+
+							--проверка обязательных параметров на null
+							if (@restaurant_id_tb is null
+								or @start_time is null
+								or @end_time is null
+								or @guests_count is null)
+								begin
+									set @err = 'err.table_booking_seat_now.unset_field'
+									set @errdesc = 'Указаны не все необходимые параметры'
+
+									goto err
+								end
+
+							--ищем столик
+							set @rp_ = null
+							set @jsT = (select @restaurant_id_tb as [restaurant_id],
+											   @date as [date],
+											   @start_time as [start_time],
+											   @end_time as [end_time],
+											   @guests_count as [guests_count]
+										for json path, without_array_wrapper)
+
+							exec [dbo].[ms_api] 'table_booking.search_free_table', @jsT, @rp_ out
+
+							--проверяю на ошибки по вложенной процедуре
+							if json_value(@rp_, '$.status') = 'err'
+								begin
+									set @err = json_value(@rp_, '$.err')
+									set @errdesc = json_value(@rp_, '$.errdesc')
+
+									goto err
+								end
+
+							if json_value(@rp_, '$.response.id') is null
+								begin
+									set @err = 'err.table_booking_seat_now.table_not_found'
+									set @errdesc = 'Свободных столиков нет'
+
+									goto err
+								end
+							else
+								begin
+
+									--создаем бронь
+									set @jsT = (select @client_id_tb as [client_id],
+													   json_value(@rp_, '$.response.id') as [table_id],
+													   @date as [date],
+													   @start_time as [start_time],
+													   @end_time as [end_time],
+													   @guests_count as [guests_count],
+													   'confirm' as [status]
+												for json path, without_array_wrapper)
+
+									set @rp_ = null
+
+									exec [dbo].[ms_api] 'table_booking.create', @jsT, @rp_ out
+
+									--проверяю на ошибки по вложенной процедуре
+									if json_value(@rp_, '$.status') = 'err'
+										begin
+											set @err = json_value(@rp_, '$.err')
+											set @errdesc = json_value(@rp_, '$.errdesc')
+
+											goto err
+										end
+
+
+									set @rp = @rp_
+									return
+
+								end
+
+						end
 
 				end
 

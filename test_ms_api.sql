@@ -7,11 +7,11 @@ go
 declare @js nvarchar(max),
 		@rp nvarchar(max)
 
-set @js = (select 'Пётр' as [firstname],
-				  'Петров' as [lastname],
-				  'petrov54@gmail.com' as [email],
-				  '79290309087' as [phone],
-				  '27.03.1995' as [dob]
+set @js = (select 'Петька' as [firstname],
+				  'Пушкин' as [lastname],
+				  'pushkin8@gmail.com' as [email],
+				  '79290319087' as [phone],
+				  '19.04.2000' as [dob]
 		   for json path, without_array_wrapper)
 
 exec [dbo].[ms_api] 'client.create', @js, @rp out
@@ -42,11 +42,11 @@ go
 declare @js nvarchar(max),
 		@rp nvarchar(max)
 
-set @js = (select '0957F43C-8E4F-40BE-A2E0-6A03C1D76A40' as [id],
+set @js = (select '48FA1343-11E8-4343-994F-280F0205C6F0' as [id],
 				  'Пётруха' as [firstname],
 				  'Петровкин' as [lastname],
 				  'petrov344@gmail.com' as [email],
-				  '79290309587' as [phone],
+				  '79290319087' as [phone],
 				  '29.03.1995' as [dob]
 		   for json path, without_array_wrapper)
 
@@ -299,9 +299,9 @@ go
 declare @js nvarchar(max),
 		@rp nvarchar(max)
 
-set @js = (select '6E0D39DD-057E-4FEE-B417-43E0A34BF116' as [id]
-				 -- null as [name],
-				 -- null as [restaurant_id]
+set @js = (select '6E0D39DD-057E-4FEE-B417-43E0A34BF116' as [id],
+				  null as [name],
+				  null as [restaurant_id]
 		   for json path, without_array_wrapper)
 
 exec [dbo].[ms_api] 'dish.get', @js, @rp out
@@ -511,4 +511,109 @@ exec [dbo].[ms_api] 'table.active', @js, @rp out
 select @rp
 select * from [dbo].[tables]
 
+go
+-------------------------TABLE_BOOKING---------------------------------
+--CREATE: client_id may be null
+declare @js nvarchar(max),
+		@rp nvarchar(max)
+
+set @js = (select '48FA1343-11E8-4343-994F-280F0205C6F0' as [client_id],
+				  '96611DF4-0417-4FA9-A336-21DCC78D17E1' as [table_id],
+				  '20.07.2023' as [date],
+				  '19:00' as [start_time],
+				  '20:00' as [end_time],
+				   4 as [guests_count],
+				   'success' as [status]
+		   for json path, without_array_wrapper)
+
+exec [dbo].[ms_api] 'table_booking.create', @js, @rp out
+
+select @rp
+select * from [dbo].[table_bookings]
+go
+--------------------------------------------------------------------------------
+--GET по: id, client_id, table_id
+declare @js nvarchar(max),
+		@rp nvarchar(max)
+
+set @js = (select null as [id],
+				  null as [client_id],
+				  '5E6DE691-6332-46A3-9C80-8E7CB7213613' as [table_id]
+		   for json path, without_array_wrapper)
+
+exec [dbo].[ms_api] 'table_booking.get', @js, @rp out
+
+select @rp
+select * from [dbo].[table_bookings]
+go
+--------------------------------------------------------------------------------
+--CONFIRM
+declare @js nvarchar(max),
+		@rp nvarchar(max)
+
+set @js = (select 'BD97AF1D-98E8-421E-9992-0EEBB187D1CC' as [id] for json path, without_array_wrapper)
+
+exec [dbo].[ms_api] 'table_booking.confirm', @js, @rp out
+
+select @rp
+select * from [dbo].[table_bookings]
+go
+--------------------------------------------------------------------------------
+--CANCEL
+declare @js nvarchar(max),
+		@rp nvarchar(max)
+
+set @js = (select 'A57C1672-5138-4673-AD7E-502CDC31BCEE' as [id] for json path, without_array_wrapper)
+
+exec [dbo].[ms_api] 'table_booking.cancel', @js, @rp out
+
+select @rp
+select * from [dbo].[table_bookings]
+go
+--------------------------------------------------------------------------------
+--SUCCESS
+declare @js nvarchar(max),
+		@rp nvarchar(max)
+
+set @js = (select 'BD97AF1D-98E8-421E-9992-0EEBB187D1CC' as [id] for json path, without_array_wrapper)
+
+exec [dbo].[ms_api] 'table_booking.success', @js, @rp out
+
+select @rp
+select * from [dbo].[table_bookings]
+go
+--------------------------------------------------------------------------------
+--SEARCH FREE TABLE нужен restaraunt_id, date, start_time, end_time, guests_count
+declare @js nvarchar(max),
+		@rp nvarchar(max)
+
+set @js = (select '8780655F-A9B3-43C2-9279-9E69DF745A61' as [restaurant_id],
+				  '18.07.2023' as [date],
+				  '12:01' as [start_time],
+				  '12:30' as [end_time],
+				  3 as [guests_count]
+		   for json path, without_array_wrapper)
+
+exec [dbo].[ms_api] 'table_booking.search_free_table', @js, @rp out
+
+select @rp
+select * from [dbo].[tables]
+select * from [dbo].[table_bookings]
+go
+--------------------------------------------------------------------------------
+--SEAT_NOW нужен restaraunt_id, start_time, end_time, guests_count
+declare @js nvarchar(max),
+		@rp nvarchar(max)
+
+set @js = (select '8780655F-A9B3-43C2-9279-9E69DF745A61' as [restaurant_id],
+				  '13:30' as [start_time],
+				  '14:00' as [end_time],
+				  4 as [guests_count]
+		   for json path, without_array_wrapper)
+
+exec [dbo].[ms_api] 'table_booking.seat_now', @js, @rp out
+
+select @rp
+select * from [dbo].[tables] where [restaurant_id] = '8780655F-A9B3-43C2-9279-9E69DF745A61'
+select * from [dbo].[table_bookings]
 go
