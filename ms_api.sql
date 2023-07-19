@@ -418,16 +418,19 @@ create procedure [dbo].[ms_api]
 								end
 
 							--проверка на уникальность email
-							set @rp_ = null
-							set @jsT = (select @client_email as [email] for json path, without_array_wrapper)
-							exec [dbo].[ms_api] 'client.get', @jsT, @rp_ out
-
-							if json_value(@rp_, '$.response.id') is not null								
+							if @client_email is not null
 								begin
-									set @err = 'err.client_active.not_unique_email'
-									set @errdesc = 'Email уже используется'
+									set @rp_ = null
+									set @jsT = (select @client_email as [email] for json path, without_array_wrapper)
+									exec [dbo].[ms_api] 'client.get', @jsT, @rp_ out
 
-									goto err
+									if json_value(@rp_, '$.response.id') is not null								
+										begin
+											set @err = 'err.client_active.not_unique_email'
+											set @errdesc = 'Email уже используется'
+
+											goto err
+										end
 								end
 
 							--изменяем статус клиента
@@ -2139,7 +2142,7 @@ create procedure [dbo].[ms_api]
 									   from [dbo].[tables]
 									   where ([id] = @table_id 
 											or ([restaurant_id] = @restaurant_id_t and [number] = @number)
-											or ([restaurant_id] = @restaurant_id_t)) 
+											or ([restaurant_id] = @restaurant_id_t and @number is null)) 
 											and [status] = 'Y'
 									   for json path)
 							goto ok
