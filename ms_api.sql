@@ -1,7 +1,11 @@
-use [myservice]
-go
-
-create procedure [dbo].[ms_api]
+USE [_DV]
+GO
+/****** Object:  StoredProcedure [dbo].[ms_api]    Script Date: 31.07.2023 14:31:38 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER procedure [dbo].[ms_api]
 	@action varchar(50),
 	@js varchar(max),
 	@rp varchar(max) out
@@ -36,7 +40,7 @@ create procedure [dbo].[ms_api]
 						begin
 							
 							set @rp = (select *
-									   from [dbo].[clients]
+									   from [dbo].[clients] with (nolock)
 									   where ([id] = @client_id 
 											or [phone] = @client_phone
 											or ([email] is not null and [email] = @client_email)) 
@@ -282,7 +286,7 @@ create procedure [dbo].[ms_api]
 							where [id] = @client_id
 		
 							--выводим
-							set @rp = (select * from [dbo].[clients]
+							set @rp = (select * from [dbo].[clients] with (nolock)
 									   where [id] = @client_id
 									   for json path, without_array_wrapper)
 
@@ -307,7 +311,7 @@ create procedure [dbo].[ms_api]
 
 
 							select @client_status = [status]
-							from [dbo].[clients] 
+							from [dbo].[clients] with (nolock)
 							where [id] = @client_id
 
 			
@@ -383,7 +387,7 @@ create procedure [dbo].[ms_api]
 							select @client_status = [status],
 								   @client_phone = [phone],
 								   @client_email = [email]
-							from [clients]
+							from [clients] with (nolock)
 							where [id] = @client_id
 
 							--проверка существует ли клиент с таким id
@@ -461,7 +465,7 @@ create procedure [dbo].[ms_api]
 						begin
 
 							set @rp = (select *
-									   from [dbo].[diets]
+									   from [dbo].[diets] with (nolock)
 									   where ([id] = @diet_id or [name] = @diet_name) and [status] = 'Y'
 									   for json path, without_array_wrapper)
 							goto ok
@@ -584,7 +588,7 @@ create procedure [dbo].[ms_api]
 							where [id] = @diet_id
 		
 							--выводим
-							set @rp = (select * from [dbo].[diets]
+							set @rp = (select * from [dbo].[diets] with (nolock)
 									   where [id] = @diet_id
 									   for json path, without_array_wrapper)
 
@@ -609,7 +613,7 @@ create procedure [dbo].[ms_api]
 
 
 							select @diet_status = [status]
-							from [dbo].[diets] 
+							from [dbo].[diets] with (nolock)
 							where [id] = @diet_id
 
 			
@@ -630,6 +634,7 @@ create procedure [dbo].[ms_api]
 
 									goto err
 								end
+
 
 							begin transaction
 
@@ -674,7 +679,7 @@ create procedure [dbo].[ms_api]
 
 							select @diet_status = [status],
 								   @diet_name = [name]
-							from [diets]
+							from [diets] with (nolock)
 							where [id] = @diet_id
 
 							--проверка на существование диеты с таким id
@@ -736,7 +741,7 @@ create procedure [dbo].[ms_api]
 						begin
 
 							set @rp = (select *
-									   from [dbo].[clients_diet]
+									   from [dbo].[clients_diet] with (nolock)
 									   where ([id] = @client_diet_id
 											or ([diet_id] = @diet_id_cd and [client_id] = @client_id_cd)
 											or [client_id] = @client_id_cd) 
@@ -837,7 +842,7 @@ create procedure [dbo].[ms_api]
 
 
 							select @client_diet_status = [status]
-							from [dbo].[clients_diet] 
+							from [dbo].[clients_diet] with (nolock)
 							where [id] = @client_diet_id
 
 			
@@ -891,8 +896,8 @@ create procedure [dbo].[ms_api]
 						begin
 
 							set @rp = (select *
-									   from [dbo].[dishes] as [d]
-									   left join [ingredients] as [i] on [d].[id] = [i].[dish_id]
+									   from [dbo].[dishes] as [d] with (nolock)
+									   left join [ingredients] as [i] with (nolock) on [d].[id] = [i].[dish_id]
 									   where ([d].[id] = @dish_id or ([d].[name] = @dish_name and [d].[restaurant_id] = @restaurant_id_d))
 											and [d].[status] = 'Y'
 											and ([i].[status] = 'Y' or [i].[status] is null)
@@ -1111,7 +1116,7 @@ create procedure [dbo].[ms_api]
 							where [id] = @dish_id
 		
 							--выводим
-							set @rp = (select * from [dbo].[dishes]
+							set @rp = (select * from [dbo].[dishes] with (nolock)
 									   where [id] = @dish_id
 									   for json path, without_array_wrapper)
 
@@ -1136,7 +1141,7 @@ create procedure [dbo].[ms_api]
 
 
 							select @dish_status = [status]
-							from [dbo].[dishes] 
+							from [dbo].[dishes] with (nolock)
 							where [id] = @dish_id
 
 			
@@ -1157,6 +1162,7 @@ create procedure [dbo].[ms_api]
 
 									goto err
 								end
+
 
 							begin transaction
 
@@ -1201,7 +1207,7 @@ create procedure [dbo].[ms_api]
 						begin
 
 							set @rp = (select *
-									   from [dbo].[ingredients]
+									   from [dbo].[ingredients] with (nolock)
 									   where ([id] = @ingredient_id 
 											or ([name] = @ingredient_name and [dish_id] = @dish_id_i)
 											or ([dish_id] = @dish_id_i and @ingredient_name is null)) 
@@ -1349,7 +1355,7 @@ create procedure [dbo].[ms_api]
 							where [id] = @ingredient_id
 		
 							--выводим
-							set @rp = (select * from [dbo].ingredients
+							set @rp = (select * from [dbo].ingredients with (nolock)
 									   where [id] = @ingredient_id
 									   for json path, without_array_wrapper)
 
@@ -1372,7 +1378,7 @@ create procedure [dbo].[ms_api]
 
 
 							select @ingredient_status = [status]
-							from [dbo].[ingredients] 
+							from [dbo].[ingredients] with (nolock)
 							where [id] = @ingredient_id
 
 			
@@ -1425,7 +1431,7 @@ create procedure [dbo].[ms_api]
 							select @ingredient_status = [status],
 								   @ingredient_name = [name],
 								   @dish_id_i = [dish_id]
-							from [ingredients]
+							from [ingredients] with (nolock)
 							where [id] = @ingredient_id
 
 							--проверка на существование ингредиента с таким id
@@ -1502,7 +1508,7 @@ create procedure [dbo].[ms_api]
 						begin
 
 							set @rp = (select *
-									   from [dbo].[dish_type]
+									   from [dbo].[dish_type] with (nolock)
 									   where ([id] = @dish_type_id
 											or ([dish_id] = @dish_id_dt and [diet_id] = @diet_id_dt)
 											or [diet_id] = @diet_id_dt)
@@ -1603,7 +1609,7 @@ create procedure [dbo].[ms_api]
 
 
 							select @dish_type_status = [status]
-							from [dbo].[dish_type] 
+							from [dbo].[dish_type] with (nolock)
 							where [id] = @dish_type_id
 
 			
@@ -1659,7 +1665,7 @@ create procedure [dbo].[ms_api]
 						begin
 
 							set @rp = (select *
-									   from [dbo].[restaurants]
+									   from [dbo].[restaurants] with (nolock)
 									   where ([id] = @restaurant_id
 											or ([name] = @restaurant_name and [address] = @address)
 											or [phone] = @restaurant_phone
@@ -1934,7 +1940,7 @@ create procedure [dbo].[ms_api]
 							where [id] = @restaurant_id
 		
 							--выводим
-							set @rp = (select * from [dbo].[restaurants]
+							set @rp = (select * from [dbo].[restaurants] with (nolock)
 									   where [id] = @restaurant_id
 									   for json path, without_array_wrapper)
 
@@ -1957,7 +1963,7 @@ create procedure [dbo].[ms_api]
 
 
 							select @restaurant_status = [status]
-							from [dbo].[restaurants] 
+							from [dbo].[restaurants] with (nolock)
 							where [id] = @restaurant_id
 
 			
@@ -1981,8 +1987,8 @@ create procedure [dbo].[ms_api]
 
 							--проверка активных броней
 							if exists (select top 1 1
-									   from [dbo].[table_bookings] as [tb]
-									   join [dbo].[tables] as [t] on [tb].[table_id] = [t].[id]
+									   from [dbo].[table_bookings] as [tb] with (nolock)
+									   join [dbo].[tables] as [t] with (nolock) on [tb].[table_id] = [t].[id]
 									   where [t].[restaurant_id] = @restaurant_id and [tb].[status] = 'Y' and [t].[status] = 'Y')
 								begin
 									set @err = 'err.restaurant_deactive.restaurant_has_bookings'
@@ -1990,6 +1996,7 @@ create procedure [dbo].[ms_api]
 
 									goto err
 								end
+
 
 							begin transaction
 
@@ -1999,15 +2006,15 @@ create procedure [dbo].[ms_api]
 								where [id] = @restaurant_id
 
 								--деактивируем его блюда
+								update [dbo].[dishes]
+								set [status] = 'N'
+								where [restaurant_id] = @restaurant_id and [status] = 'Y'
+
 								update dt
 								set [status] = 'N'
 								from [dbo].[dish_type] dt
 								left join [dbo].[dishes] dsh on dsh.[id] = dt.[dish_id] 
 								where dsh.[restaurant_id] = @restaurant_id and dt.[status] = 'Y'
-
-								update [dbo].[dishes]
-								set [status] = 'N'
-								where [restaurant_id] = @restaurant_id and [status] = 'Y'
 
 								--деактивируем брони + столики
 								update tb
@@ -2049,7 +2056,7 @@ create procedure [dbo].[ms_api]
 								   @address = [address],
 								   @restaurant_phone = [phone],
 								   @restaurant_email = [email]
-							from [restaurants]
+							from [restaurants] with (nolock)
 							where [id] = @restaurant_id
 
 							--проверка на существование ресторана с таким id
@@ -2139,7 +2146,7 @@ create procedure [dbo].[ms_api]
 						begin
 
 							set @rp = (select *
-									   from [dbo].[tables]
+									   from [dbo].[tables] with (nolock)
 									   where ([id] = @table_id 
 											or ([restaurant_id] = @restaurant_id_t and [number] = @number)
 											or ([restaurant_id] = @restaurant_id_t and @number is null)) 
@@ -2247,7 +2254,7 @@ create procedure [dbo].[ms_api]
 
 							select @table_status = [status],
 								   @restaurant_id_t = [restaurant_id]
-							from [dbo].[tables] 
+							from [dbo].[tables] with (nolock)
 							where [id] = @table_id
 
 			
@@ -2283,16 +2290,13 @@ create procedure [dbo].[ms_api]
 								end
 
 							--деактивируем столик
-							update [dbo].[tables]
-							set [status] = 'N'
-							where [id] = @table_id
+							set @rp_ = null
+							set @jsT = (select @table_id as [id] for json path, without_array_wrapper)
+							exec [dbo].[ms_block] 'table.deactive', @jsT, @rp_ out
 
 							--выводим
-							set @rp = (select @table_id as [id],
-												'N' as [status]
-										for json path, without_array_wrapper)
-			
-							goto ok
+							set @rp = @rp_
+							return
 
 						end
 
@@ -2313,7 +2317,7 @@ create procedure [dbo].[ms_api]
 							select @table_status = [status],
 								   @restaurant_id_t = [restaurant_id],
 								   @number = [number]
-							from [dbo].[tables]
+							from [dbo].[tables] with (nolock)
 							where [id] = @table_id
 
 							--проверка на существование столика с таким id
@@ -2363,16 +2367,12 @@ create procedure [dbo].[ms_api]
 								end
 
 							--меняем статус
-							update [dbo].[tables] 
-							set [status] = 'Y'
-							where [id] = @table_id
+							set @rp_ = null
+							set @jsT = (select @table_id as [id] for json path, without_array_wrapper)
+							exec [dbo].[ms_block] 'table.active', @jsT, @rp_ out
 
 							--выводим
-							set @rp = (select @table_id as [id],
-											  'Y' as [status]
-									   for json path, without_array_wrapper)
-
-							goto ok
+							set @rp = @rp_
 
 						end
 
@@ -2397,7 +2397,7 @@ create procedure [dbo].[ms_api]
 						begin
 
 							set @rp = (select *
-									   from [dbo].[table_bookings]
+									   from [dbo].[table_bookings] with (nolock)
 									   where ([id] = @table_booking_id or [client_id] = @client_id_tb or [table_id] = @table_id_tb) and [status] in ('wait_conf', 'confirm')
 									   for json path)
 							goto ok
@@ -2492,8 +2492,8 @@ create procedure [dbo].[ms_api]
 
 							--проверка времени, что оно попадает в рабочие часы
 							if not exists (select top 1 1
-											from [dbo].[tables] as [t]
-											join [dbo].[restaurants] as [r] on [t].[restaurant_id] = [r].[id]
+											from [dbo].[tables] as [t] with (nolock)
+											join [dbo].[restaurants] as [r] with (nolock) on [t].[restaurant_id] = [r].[id]
 											where [t].[id] = @table_id_tb
 												and (@start_time between [r].[work_start] and [r].[work_end])
 												and (@end_time between [r].[work_start] and [r].[work_end])
@@ -2508,8 +2508,8 @@ create procedure [dbo].[ms_api]
 
 							--проверка на занятость столика
 							if exists (select top 1 1
-										from [dbo].[table_bookings]
-										where [table_id] = @table_id_tb
+									   from [dbo].[table_bookings] with (nolock)
+									   where [table_id] = @table_id_tb
 											and [date] = @date
 											and (([start_time] between @start_time and @end_time) or ([end_time] between @start_time and @end_time))
 											and [status] in ('wait_conf', 'confirm'))
@@ -2522,29 +2522,22 @@ create procedure [dbo].[ms_api]
 
 		
 							--добавляем значения в таблицу
-							set @table_booking_id = newid()
-							insert into [dbo].[table_bookings] ([id], [client_id], [table_id], [date], [start_time], [end_time], [guests_count], [status])
-							values (@table_booking_id,
-									@client_id_tb,
-									@table_id_tb,
-									@date,
-									@start_time,
-									@end_time,
-									@guests_count,
-									isnull(@table_booking_status, 'wait_conf'))
-		
-							--выводим
-							set @rp = (select @table_booking_id as [id],
-												@client_id_tb as [client_id],
-												@table_id_tb as [table_id],
-												@date as [date],
-												@start_time as [start_time],
-												@end_time as [end_time],
-												@guests_count as [guests_count],
-												isnull(@table_booking_status, 'wait_conf') as [status]
+							set @rp_ = null
+							set @jsT = (select @table_booking_id as [id],
+											   @client_id_tb as [client_id],
+											   @table_id_tb as [table_id],
+											   @date as [date],
+											   @start_time as [start_time],
+											   @end_time as [end_time],
+											   @guests_count as [guests_count],
+											   @table_booking_status as [status]
 										for json path, without_array_wrapper)
 
-							goto ok
+							exec [dbo].[ms_block] 'table_booking.create', @jsT, @rp_ out
+		
+							--выводим
+							set @rp = @rp_
+							return
 
 						end
 
@@ -2562,7 +2555,7 @@ create procedure [dbo].[ms_api]
 								end
 
 							select @table_booking_status = [status]
-							from [dbo].[table_bookings] 
+							from [dbo].[table_bookings] with (nolock)
 							where [id] = @table_booking_id
 
 							--проверка на существование брони с таким id
@@ -2594,16 +2587,14 @@ create procedure [dbo].[ms_api]
 								end	
 
 							--изменяем бронь
-							update [dbo].[table_bookings] 
-							set [status] = 'confirm'
-							where [id] = @table_booking_id
-		
-							--выводим
-							set @rp = (select @table_booking_id as [id],
-											  'confirm' as [status]
-									   for json path, without_array_wrapper)
+							set @rp_ = null
+							set @jsT = (select @table_booking_id as [id] for json path, without_array_wrapper)
 
-							goto ok
+							exec [dbo].[ms_block] 'table_booking.confirm', @jsT, @rp_ out
+
+							--выводим
+							set @rp = @rp_
+							return
 
 						end
 
@@ -2621,7 +2612,7 @@ create procedure [dbo].[ms_api]
 								end
 
 							select @table_booking_status = [status]
-							from [dbo].[table_bookings] 
+							from [dbo].[table_bookings] with (nolock)
 							where [id] = @table_booking_id
 
 							--проверка на существование брони с таким id
@@ -2646,16 +2637,14 @@ create procedure [dbo].[ms_api]
 	
 
 							--изменяем бронь
-							update [dbo].[table_bookings] 
-							set [status] = 'cancel'
-							where [id] = @table_booking_id
+							set @rp_ = null
+							set @jsT = (select @table_booking_id as [id] for json path, without_array_wrapper)
+
+							exec [dbo].[ms_block] 'table_booking.cancel', @jsT, @rp_ out
 		
 							--выводим
-							set @rp = (select @table_booking_id as [id],
-											  'cancel' as [status]
-									   for json path, without_array_wrapper)
-
-							goto ok
+							set @rp = @rp_
+							return
 
 						end
 
@@ -2673,7 +2662,7 @@ create procedure [dbo].[ms_api]
 								end
 
 							select @table_booking_status = [status]
-							from [dbo].[table_bookings] 
+							from [dbo].[table_bookings] with (nolock)
 							where [id] = @table_booking_id
 
 							--проверка на существование брони с таким id
@@ -2712,19 +2701,16 @@ create procedure [dbo].[ms_api]
 									goto err
 								end	
 
-	
 
 							--изменяем бронь
-							update [dbo].[table_bookings] 
-							set [status] = 'success'
-							where [id] = @table_booking_id
+							set @rp_ = null
+							set @jsT = (select @table_booking_id as [id] for json path, without_array_wrapper)
+
+							exec [dbo].[ms_block] 'table_booking.success', @jsT, @rp_ out
 		
 							--выводим
-							set @rp = (select @table_booking_id as [id],
-											  'success' as [status]
-									   for json path, without_array_wrapper)
-
-							goto ok
+							set @rp = @rp_
+							return
 
 						end
 
@@ -2795,7 +2781,7 @@ create procedure [dbo].[ms_api]
 
 							--проверка корректности времени, что оно попадает в рабочие часы
 							if not exists (select top 1 1
-										   from [dbo].[restaurants]
+										   from [dbo].[restaurants] with (nolock)
 										   where [id] = @restaurant_id_tb
 												and (@start_time between [work_start] and [work_end])
 												and (@end_time between [work_start] and [work_end])
@@ -2809,8 +2795,8 @@ create procedure [dbo].[ms_api]
 		
 							--выводим
 							set @rp = (select top 1 t.*
-									   from [dbo].[tables] t
-									   left join [dbo].[table_bookings] tb on tb.[table_id] = t.id
+									   from [dbo].[tables] t with (nolock)
+									   left join [dbo].[table_bookings] tb with (nolock) on tb.[table_id] = t.id
 									   where (tb.[id] is null 
 											or (@date = [date] and (@start_time not between [start_time] and [end_time]) 
 															   and (@end_time not between [start_time] and [end_time])
@@ -2885,17 +2871,7 @@ create procedure [dbo].[ms_api]
 
 									set @rp_ = null
 
-									exec [dbo].[ms_api] 'table_booking.create', @jsT, @rp_ out
-
-									--проверяю на ошибки по вложенной процедуре
-									if json_value(@rp_, '$.status') = 'err'
-										begin
-											set @err = json_value(@rp_, '$.err')
-											set @errdesc = json_value(@rp_, '$.errdesc')
-
-											goto err
-										end
-
+									exec [dbo].[ms_block] 'table_booking.create', @jsT, @rp_ out
 
 									set @rp = @rp_
 									return
